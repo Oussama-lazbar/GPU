@@ -9,11 +9,11 @@ __kernel void sable_ocl (__global unsigned *in, __global unsigned *out)
   
 
   out[y*DIM+x]=in[y*DIM+x] ;
-  // if (out[y*DIM+x] > 4)
-  // {
+   //if (out[y*DIM+x] > 4)
+   //{
     out[y*DIM+x]-=4*(in[y*DIM+x]/4);
     // voisin du haut
-    if (y+1 < DIM-2)
+    if (y+1 < DIM-1)
       out[y*DIM+x]+=in[(y+1)*DIM+x]/4;
     // voisin du bas
     if(y-1 > 0)
