@@ -100,6 +100,7 @@ static int do_tile (int x, int y, int width, int height, int who)
   monitoring_end_tile (x, y, width, height, who);
   return chgt;
 }
+
 // Separation du travail : On traite l'interieur de la tuile separement des bords 
 
 // Pour le traitement de la partie interieure de la tuile 
@@ -224,7 +225,8 @@ unsigned sable_compute_omp_tiled(unsigned nb_iter)
                               TILE_W - ((x + TILE_W == DIM) + (x == 0)),
                               TILE_H - ((y + TILE_H == DIM) + (y == 0)),
                               omp_get_thread_num());
-
+      //#pragma omp barrier
+      
       // INTERIEUR DES TUILES : TRES PARALLELISABLE
       // c'est la partie qui  coûte le moins cher 
       // On peu utiliser un collapse(2) sans probleme 
@@ -238,6 +240,45 @@ unsigned sable_compute_omp_tiled(unsigned nb_iter)
                                 omp_get_thread_num());
     }
         
+    if (changement == 0)
+      return it;
+  }
+  return 0;
+}
+
+
+unsigned sable_compute_omph(unsigned nb_iter)
+{
+  for (unsigned it = 1; it <= nb_iter; it++)
+  {
+    changement = 0;
+
+#pragma omp parallel
+    {
+#pragma omp for collapse(1) schedule(runtime)
+      for (int y = 0; y < DIM; y += 3 * TILE_H)
+        for (int x = 0; x < DIM; x += TILE_W)
+          changement |= do_tile(x + (x == 0), y + (y == 0),
+                                TILE_W - ((x + TILE_W == DIM) + (x == 0)),
+                                TILE_H - ((y + TILE_H == DIM) + (y == 0)),
+                                omp_get_thread_num());
+
+#pragma omp for collapse(1) schedule(runtime)
+      for (int y = TILE_H; y < DIM; y += 3 * TILE_H)
+        for (int x = 0; x < DIM; x += TILE_W)
+          changement |= do_tile(x + (x == 0), y + (y == 0),
+                                TILE_W - ((x + TILE_W == DIM) + (x == 0)),
+                                TILE_H - ((y + TILE_H == DIM) + (y == 0)),
+                                omp_get_thread_num());
+
+#pragma omp for collapse(1) schedule(runtime)
+      for (int y = 2 * TILE_H; y < DIM; y += 3 * TILE_H)
+        for (int x = 0; x < DIM; x += TILE_W)
+          changement |= do_tile(x + (x == 0), y + (y == 0),
+                                TILE_W - ((x + TILE_W == DIM) + (x == 0)),
+                                TILE_H - ((y + TILE_H == DIM) + (y == 0)),
+                                omp_get_thread_num());
+    }
     if (changement == 0)
       return it;
   }
